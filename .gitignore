@@ -1,3 +1,9 @@
+# Project data
+data/genes.list
+
+# Notebook checkpoints
+**/.ipynb_checkpoints/**
+
 # History files
 .Rhistory
 .Rapp.history
