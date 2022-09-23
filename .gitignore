@@ -1,5 +1,7 @@
 # Project data
 data/genes.list
+data/gene_to_data.pickle
+data/EnsDb.Hsapiens.v79.sqlite
 
 # Notebook checkpoints
 **/.ipynb_checkpoints/**
@@ -43,3 +45,4 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
