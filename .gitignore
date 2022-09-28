@@ -3,6 +3,7 @@ data/genes.list
 data/gene_to_data.pickle
 data/EnsDb.Hsapiens.v79.sqlite
 data/gene_data.csv
+inputs/47 genes and its guide sequence- synthego.xlsx
 
 # Notebook checkpoints
 **/.ipynb_checkpoints/**
@@ -46,5 +47,6 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
 
 
