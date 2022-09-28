@@ -18,4 +18,3 @@ Contents:
     - 1 gene per row
     - data has been validated & exceptions dealt with
     - minimal preprocessing has been done on the data files (check CDS starts)
-    
