@@ -9,11 +9,14 @@ from pickle import dump,load
 import sys
 import sqlite3
 from collections import Counter
+from os.path import exists
+from multiprocessing import Pool
+
 sys.setrecursionlimit(100000)
 
 problem_file = "gathered_data/problem_genes.list"
 
-def get_bp_and_cds(gene):
+def get_bp_and_cds(gene,debug=False):
   result = {}
   payload={}
 
@@ -53,15 +56,18 @@ def get_bp_and_cds(gene):
   target_url_template = "https://www.ncbi.nlm.nih.gov/sviewer/viewer.fcgi?id={}&db=nuccore&report=genbank&conwithfeat=on&basic_feat=on&hide-cdd=on&from={}&to={}&strand={}&retmode=html&withmarkup=on&tool=portal&log$=seqview&maxdownloadsize=1000000"
   #target_url_template2 = "https://www.ncbi.nlm.nih.gov/sviewer/viewer.fcgi?id={}&db=nuccore&report=genbank&=&from={}&to={}&retmode=html&ncbi_phid={}&withmarkup=on&tool=portal&log$=seqview&maxdownloadsize=1000000"
   result["genbank_jquery"] = target_url_template.format(result["ncbi_id"],result["start"],result["stop"],result["strand"])
-  print(result["gene_bank_url"])
-  print(result["genbank_jquery"])
+  if debug:
+    print(result["gene_bank_url"])
+    print(result["genbank_jquery"])
   response4 = requests.request("GET", result["genbank_jquery"], headers=headers, data=payload)
-  print(len(response4.text))
+  if debug:
+    print(len(response4.text))
   m = re.search(re.compile(r"CDS\s+join\(((?:&|l|t|;|\.|,|\d|\s)+)\)"),response4.text)
   result["CDS"] = "".join(m.groups()[0].split())
   soup4 = BeautifulSoup(response4.text,"html.parser")
   result["seq"] = "".join(["".join(s.contents[0].split()) for s in soup4.findAll("span",class_="ff_line")])
-  print("done!")
+  if debug:
+    print("done!")
   return result
 
 def get_all_human_protein_coding_genes():
@@ -84,5 +90,31 @@ def get_all_gene_data(genes):
       with open(problem_file,"a+") as f:
         f.write("{}\n".format(gene))
 
+def get_gene_seq(gene):
+    msg = ""
+    if not exists("gathered_data/raw_gene_results/{}.pickle".format(gene)):
+        msg += "Could not find data for {}\n".format(gene)
+        try:
+            result = get_bp_and_cds(gene)
+            with open("gathered_data/raw_gene_results/{}.pickle".format(gene),"wb+") as f:
+                dump(result,f)
+            msg += "done!"
+        except Exception as e:
+            msg += "failed\n{}".format(e)
+            with open(problem_file,"a+") as f:
+                f.write("{}\n".format(gene))
+    else:
+        msg += "data for {} exists".format(gene)
+    return msg
+
 if __name__ == "__main__":
-  pass
+  connection = sqlite3.connect("../data/EnsDb.Hsapiens.v79.sqlite")
+  cursor = connection.cursor()
+  rows = cursor.execute("SELECT gene_name,gene_biotype FROM gene").fetchall()
+  protein_coding_genes = [g for g,b in rows if b == "protein_coding"]
+  with Pool(processes=32) as P:
+    msgs = P.map(get_gene_seq, protein_coding_genes)
+  with open("gathered_data/msgs.out","w+") as f:
+    f.write("\n".join(msgs))
+  obtained = sum("done" in m or "exists" in m for m in msgs)
+  print("Obtained data on {}/{} ({:.2f}%) of protein-coding genes".format(obtained,len(protein_coding_genes),100*obtained/len(protein_coding_genes)))
